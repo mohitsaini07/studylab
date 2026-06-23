@@ -85,13 +85,13 @@ export function StudySetView({
         <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
           <div className="space-y-6">
             <Card className="p-6">
-              <div className="flex items-start justify-between">
-                <div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
                   <Badge className="border-brand/20 bg-brand-soft text-brand-dark">
                     <Sparkles size={12} className="mr-1.5" />
                     AI summary
                   </Badge>
-                  <h2 className="mt-4 text-lg font-semibold">
+                  <h2 className="mt-4 break-words text-lg font-semibold">
                     What this material covers
                   </h2>
                 </div>
@@ -131,8 +131,8 @@ export function StudySetView({
                     <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-canvas text-xs font-semibold text-muted">
                       {String(i + 1).padStart(2, "0")}
                     </span>
-                    <div>
-                      <p className="text-sm font-medium">{t.title}</p>
+                    <div className="min-w-0">
+                      <p className="break-words text-sm font-medium">{t.title}</p>
                       <p className="mt-1 text-xs leading-5 text-muted">
                         {t.description}
                       </p>
@@ -173,11 +173,18 @@ export function StudySetView({
                     <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-soft text-brand">
                       <I size={18} />
                     </span>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{String(title)}</p>
-                      <p className="mt-1 text-xs text-muted">{String(meta)}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words text-sm font-medium">
+                        {String(title)}
+                      </p>
+                      <p className="mt-1 break-words text-xs text-muted">
+                        {String(meta)}
+                      </p>
                     </div>
-                    <ChevronDown size={15} className="-rotate-90 text-muted" />
+                    <ChevronDown
+                      size={15}
+                      className="shrink-0 -rotate-90 text-muted"
+                    />
                   </Card>
                 </Link>
               );
@@ -187,7 +194,7 @@ export function StudySetView({
       )}
       {tab === "Summary" && (
         <Card className="mx-auto max-w-full p-6 sm:p-9">
-          <h2 className="text-xl font-semibold">
+          <h2 className="break-words text-xl font-semibold">
             {s.title} — Complete Summary
           </h2>
           <p className="mt-6 whitespace-pre-line text-sm leading-7 text-muted">
@@ -200,7 +207,7 @@ export function StudySetView({
           {topics.map((t, i) => (
             <Card key={t.title} className="p-5">
               <Badge>Topic {i + 1}</Badge>
-              <h3 className="mt-4 font-semibold">{t.title}</h3>
+              <h3 className="mt-4 break-words font-semibold">{t.title}</h3>
               <p className="mt-2 text-sm leading-6 text-muted">
                 {t.description}
               </p>
@@ -242,7 +249,7 @@ export function StudySetView({
                           key={q.id}
                           className="rounded-lg border border-border p-3 text-xs"
                         >
-                          <summary className="cursor-pointer font-medium">
+                          <summary className="cursor-pointer break-words font-medium">
                             {q.question}
                           </summary>
                           <p className="mt-2 leading-5 text-muted">

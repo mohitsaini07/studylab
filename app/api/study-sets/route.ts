@@ -117,6 +117,39 @@ function validateFileSize(size: number, sourceType: SourceType) {
   }
 }
 
+async function cleanupSourceFile(
+  supabase: ReturnType<typeof createAdminClient>,
+  studySetId: string,
+  storagePath: string,
+) {
+  const { error: removeError } = await supabase.storage
+    .from("study-pdfs")
+    .remove([storagePath]);
+
+  if (removeError) {
+    console.warn("Source file cleanup failed", {
+      studySetId,
+      storagePath,
+      error: removeError.message,
+    });
+    return false;
+  }
+
+  const { error: updateError } = await supabase
+    .from("study_sets")
+    .update({ file_url: "" })
+    .eq("id", studySetId);
+
+  if (updateError) {
+    console.warn("Source file cleanup marker update failed", {
+      studySetId,
+      error: updateError.message,
+    });
+  }
+
+  return true;
+}
+
 async function readRequestInput(
   request: Request,
   userId: string,
@@ -252,6 +285,7 @@ export async function POST(request: Request) {
 
     if (createError) throw new Error(createError.message);
     studySetId = created.id;
+    const createdStudySetId = created.id;
 
     stage = input.sourceType === "pdf" ? "PDF extraction" : "image OCR";
     const { text, pageCount } =
@@ -261,6 +295,14 @@ export async function POST(request: Request) {
             text: await extractTextFromImage(input.buffer, input.contentType),
             pageCount: 1,
           };
+
+    stage = "source cleanup";
+    const cleanedUp = await cleanupSourceFile(
+      supabase,
+      createdStudySetId,
+      input.storagePath,
+    );
+    if (cleanedUp) storagePath = undefined;
 
     stage = "Gemini generation";
     const generated = await generateStudyMaterial(
@@ -276,6 +318,7 @@ export async function POST(request: Request) {
         title: generated.title,
         summary: generated.summary,
         topics: generated.topics,
+        file_url: cleanedUp ? "" : input.storagePath,
         page_count: pageCount,
         status: "ready",
         error_message: null,

@@ -32,6 +32,8 @@ export async function DELETE(
     .eq("user_id", user.id);
   if (error)
     return NextResponse.json({ error: error.message }, { status: 500 });
-  await supabase.storage.from("study-pdfs").remove([data.file_url]);
+  if (data.file_url) {
+    await supabase.storage.from("study-pdfs").remove([data.file_url]);
+  }
   return NextResponse.json({ ok: true });
 }

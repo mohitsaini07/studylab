@@ -205,7 +205,7 @@ export function AppShell({
         </div>
       )}
 
-      <div className="lg:pl-64">
+      <div className="min-w-0 lg:pl-64">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-white/90 px-4 backdrop-blur-xl sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <button
@@ -308,7 +308,7 @@ export function AppShell({
           </div>
         </header>
 
-        <main className="mx-auto max-w-[1280px] p-4 sm:p-6 lg:p-8">
+        <main className="mx-auto max-w-[1280px] overflow-x-hidden p-4 sm:p-6 lg:p-8">
           {children}
         </main>
       </div>

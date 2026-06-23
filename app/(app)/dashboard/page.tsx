@@ -81,7 +81,7 @@ export default async function Dashboard() {
       <div className="mt-8 grid gap-6 xl:grid-cols-[1fr_340px]">
         <section>
           <div className="mb-4 flex items-center justify-between">
-            <div>
+            <div className="min-w-0">
               <h2 className="text-lg font-semibold">Recent study sets</h2>
               <p className="mt-1 text-sm text-muted">
                 Pick up where you left off
@@ -126,7 +126,9 @@ export default async function Dashboard() {
                   <span className="text-xs font-medium text-brand">
                     READY TO REVIEW
                   </span>
-                  <h3 className="mt-2 text-lg font-semibold">{ready.title}</h3>
+                  <h3 className="mt-2 break-words text-lg font-semibold">
+                    {ready.title}
+                  </h3>
                   <p className="mt-2 text-sm leading-6 text-muted">
                     Review the generated flashcards, then test recall with a
                     focused quiz.
@@ -182,14 +184,14 @@ function Metric({
 }) {
   return (
     <Card className="p-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-soft text-brand">
           <Icon size={18} />
         </span>
-        <span className="text-xs text-muted">{meta}</span>
+        <span className="min-w-0 truncate text-xs text-muted">{meta}</span>
       </div>
-      <p className="mt-5 text-2xl font-semibold">{value}</p>
-      <p className="mt-1 text-sm text-muted">{label}</p>
+      <p className="mt-5 break-words text-2xl font-semibold">{value}</p>
+      <p className="mt-1 break-words text-sm text-muted">{label}</p>
     </Card>
   );
 }

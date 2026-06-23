@@ -51,7 +51,7 @@ export function FlashcardsClient({
   }
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Button asChild variant="ghost">
           <Link href={`/study-set/${studySet.id}`}>
             <ArrowLeft size={16} />
@@ -71,7 +71,7 @@ export function FlashcardsClient({
         </Button>
       </div>
       <div className="mb-8 text-center">
-        <p className="text-xs font-semibold uppercase tracking-wider text-brand">
+        <p className="break-words text-xs font-semibold uppercase tracking-wider text-brand">
           {studySet.title}
         </p>
         <h1 className="mt-2 text-2xl font-semibold">Flashcard review</h1>
@@ -92,7 +92,7 @@ export function FlashcardsClient({
           <p className="text-xs font-semibold uppercase tracking-[.14em] text-muted">
             {flip ? "Answer" : "Question"}
           </p>
-          <h2 className="mt-5 max-w-xl text-balance text-2xl font-semibold leading-9 sm:text-3xl">
+          <h2 className="mt-5 max-w-xl break-words text-balance text-2xl font-semibold leading-9 sm:text-3xl">
             {flip ? card.back : card.front}
           </h2>
           <p className="mt-10 flex items-center gap-2 text-xs text-muted">
@@ -102,7 +102,7 @@ export function FlashcardsClient({
         </Card>
       </button>
       {flip ? (
-        <div className="mt-6 grid grid-cols-2 gap-3">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <Button
             variant="outline"
             size="lg"
@@ -121,7 +121,7 @@ export function FlashcardsClient({
           </Button>
         </div>
       ) : (
-        <div className="mt-6 flex justify-between">
+        <div className="mt-6 flex flex-col justify-between gap-3 sm:flex-row">
           <Button
             variant="ghost"
             disabled={i === 0}

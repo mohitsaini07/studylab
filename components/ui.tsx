@@ -49,7 +49,7 @@ export function Card({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={cn("rounded-xl border border-border bg-white", className)}
+      className={cn("min-w-0 rounded-xl border border-border bg-white", className)}
       {...props}
     />
   );
@@ -113,21 +113,21 @@ export function PageHeader({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-      <div>
+    <div className="mb-8 flex min-w-0 flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      <div className="min-w-0">
         {eyebrow && (
           <p className="mb-2 text-xs font-semibold uppercase tracking-[.12em] text-brand">
             {eyebrow}
           </p>
         )}
-        <h1 className="text-2xl font-semibold tracking-tight text-ink sm:text-[28px]">
+        <h1 className="break-words text-2xl font-semibold tracking-tight text-ink sm:text-[28px]">
           {title}
         </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">
+        <p className="mt-2 max-w-2xl break-words text-sm leading-6 text-muted">
           {description}
         </p>
       </div>
-      {actions && <div className="flex shrink-0 gap-2">{actions}</div>}
+      {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
     </div>
   );
 }

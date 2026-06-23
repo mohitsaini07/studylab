@@ -137,7 +137,7 @@ export function QuizClient({
   const options = q.options ?? [];
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between gap-3">
         <Button asChild variant="ghost">
           <Link href={`/study-set/${studySet.id}`}>
             <ArrowLeft size={16} />
@@ -150,11 +150,11 @@ export function QuizClient({
         </button>
       </div>
       <div className="mb-8">
-        <div className="mb-3 flex items-center justify-between text-xs">
+        <div className="mb-3 flex items-center justify-between gap-3 text-xs">
           <span className="font-medium">
             Question {index + 1} of {questions.length}
           </span>
-          <span className="text-muted">{studySet.title}</span>
+          <span className="min-w-0 truncate text-muted">{studySet.title}</span>
         </div>
         <Progress value={((index + 1) / questions.length) * 100} />
       </div>
@@ -162,7 +162,7 @@ export function QuizClient({
         <p className="text-xs font-semibold uppercase tracking-wider text-brand">
           Multiple choice
         </p>
-        <h1 className="mt-4 text-balance text-xl font-semibold leading-8 sm:text-2xl">
+        <h1 className="mt-4 break-words text-balance text-xl font-semibold leading-8 sm:text-2xl">
           {q.question}
         </h1>
         <div className="mt-7 space-y-3">
@@ -188,7 +188,7 @@ export function QuizClient({
                     String.fromCharCode(65 + i)
                   )}
                 </span>
-                {option}
+                <span className="min-w-0 break-words">{option}</span>
               </button>
             );
           })}

@@ -223,19 +223,16 @@ export default function Upload() {
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted">
             We created your selected learning material from {file?.name}.
           </p>
-          <div
-            className="mx-auto mt-7 grid max-w-lg gap-3"
-            style={{
-              gridTemplateColumns: `repeat(${Math.min(resultItems.length, 4)},minmax(0,1fr))`,
-            }}
-          >
+          <div className="mx-auto mt-7 grid max-w-lg grid-cols-2 gap-3 sm:grid-cols-4">
             {resultItems.map((x) => (
               <div
                 key={String(x[1])}
-                className="rounded-lg border border-border p-3"
+                className="min-w-0 rounded-lg border border-border p-3"
               >
-                <b className="text-lg">{x[0]}</b>
-                <p className="text-xs text-muted">{x[1]}</p>
+                <b className="block text-lg">{x[0]}</b>
+                <p className="break-words text-[11px] text-muted sm:text-xs">
+                  {x[1]}
+                </p>
               </div>
             ))}
           </div>
@@ -251,7 +248,7 @@ export default function Upload() {
       ) : (
         <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
           <div className="space-y-5">
-            <Card className="p-5">
+            <Card className="p-4 sm:p-5">
               <div
                 onClick={() => state !== "processing" && input.current?.click()}
                 onDragOver={(e) => e.preventDefault()}
@@ -259,7 +256,7 @@ export default function Upload() {
                   e.preventDefault();
                   pick(e.dataTransfer.files[0]);
                 }}
-                className="cursor-pointer rounded-xl border border-dashed border-[#c9c9c3] bg-canvas px-5 py-10 text-center transition-colors hover:border-brand hover:bg-brand-soft/30"
+                className="cursor-pointer overflow-hidden rounded-xl border border-dashed border-[#c9c9c3] bg-canvas px-4 py-8 text-center transition-colors hover:border-brand hover:bg-brand-soft/30 sm:px-5 sm:py-10"
               >
                 <input
                   ref={input}
@@ -295,14 +292,14 @@ export default function Upload() {
                     <span className="mx-auto grid h-12 w-12 place-items-center rounded-xl border border-border bg-white text-brand">
                       <UploadCloud size={22} />
                     </span>
-                    <p className="mt-4 font-medium">
+                    <p className="mx-auto mt-4 max-w-full text-balance font-medium leading-6">
                       Drop your PDF or image here, or{" "}
                       <span className="text-brand">browse</span>
                     </p>
-                    <p className="mt-2 text-xs text-muted">
+                    <p className="mx-auto mt-2 max-w-xs text-xs leading-5 text-muted sm:max-w-none">
                       PDF up to 25 MB · Images up to 5 MB · Clear text works best
                     </p>
-                    <div className="mx-auto mt-4 inline-flex max-w-md items-center justify-center rounded-full border border-border bg-white px-3 py-1.5 text-xs text-muted">
+                    <div className="mx-auto mt-4 flex max-w-md items-center justify-center rounded-2xl border border-border bg-white px-3 py-1.5 text-center text-xs leading-5 text-muted sm:rounded-full">
                       For best results, upload text-based PDFs when possible or
                       clear, small images when needed.
                     </div>
@@ -311,7 +308,7 @@ export default function Upload() {
               </div>
               {state === "selected" && file && (
                 <div className="mt-4 flex items-center gap-3 rounded-lg border border-border p-3">
-                  <span className="grid h-10 w-10 place-items-center rounded-lg bg-red-50 text-red-600">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-red-50 text-red-600">
                     <FileText size={18} />
                   </span>
                   <div className="min-w-0 flex-1">
@@ -320,7 +317,10 @@ export default function Upload() {
                       {(file.size / 1024 / 1024).toFixed(1)} MB
                     </p>
                   </div>
-                  <button onClick={reset} className="text-muted hover:text-ink">
+                  <button
+                    onClick={reset}
+                    className="shrink-0 text-muted hover:text-ink"
+                  >
                     <X size={17} />
                   </button>
                 </div>

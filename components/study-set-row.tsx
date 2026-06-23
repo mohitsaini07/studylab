@@ -33,10 +33,10 @@ export function StudySetRow({ studySet: s }: { studySet: StudySet }) {
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
-            <div>
+            <div className="min-w-0">
               <Link
                 href={`/study-set/${s.id}`}
-                className="font-semibold group-hover:text-brand"
+                className="break-words font-semibold group-hover:text-brand"
               >
                 {s.title}
               </Link>
@@ -53,7 +53,7 @@ export function StudySetRow({ studySet: s }: { studySet: StudySet }) {
             <button
               aria-label={`Actions for ${s.title}`}
               onClick={() => setMenu(!menu)}
-              className="text-muted"
+              className="shrink-0 text-muted"
             >
               <MoreHorizontal size={18} />
             </button>
