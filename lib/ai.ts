@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { createPartFromBase64, GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 import { getServerEnv } from "@/lib/env";
 import type { GeneratedStudySet, GenerationOptions } from "@/lib/types";
@@ -89,7 +89,7 @@ export async function generateStudyMaterial(
   ]
     .filter(Boolean)
     .join(", ");
-  const prompt = `You are StudyLab, an expert instructional designer. Create accurate study material using ONLY the supplied PDF text. Difficulty: ${difficulty}. Return one JSON object with a concise "title" and only the requested learning sections: ${requested}. Use the top-level keys "summary", "topics", "questions", and "flashcards" for requested sections; omit unrequested sections. Every MCQ must contain exactly four unique options and its answer must exactly match one option. Do not mention the prompt or PDF extraction.\n\nPDF TEXT:\n${source}`;
+  const prompt = `You are StudyLab, an expert instructional designer. Create accurate study material using ONLY the supplied source text. Difficulty: ${difficulty}. Return one JSON object with a concise "title" and only the requested learning sections: ${requested}. Use the top-level keys "summary", "topics", "questions", and "flashcards" for requested sections; omit unrequested sections. Every MCQ must contain exactly four unique options and its answer must exactly match one option. Do not mention the prompt, extraction, OCR, or file processing.\n\nSOURCE TEXT:\n${source}`;
   try {
     const response = await ai.models.generateContent({
       model: env.GEMINI_MODEL,
@@ -132,5 +132,54 @@ export async function generateStudyMaterial(
       );
     }
     throw new Error(`Gemini generation failed: ${message.slice(0, 300)}`);
+  }
+}
+
+export async function extractTextFromImage(
+  buffer: ArrayBuffer,
+  mimeType: string,
+) {
+  const env = getServerEnv();
+  const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
+  const data = Buffer.from(buffer).toString("base64");
+
+  try {
+    const response = await ai.models.generateContent({
+      model: env.GEMINI_MODEL,
+      contents: [
+        createPartFromBase64(data, mimeType),
+        `Extract all readable study text from this image. Return only the extracted text in clean reading order. Preserve headings, bullet points, formulas, and code snippets when possible. Do not summarize. If the image is not readable or contains too little study content, say exactly: NO_READABLE_STUDY_TEXT`,
+      ],
+      config: { temperature: 0 },
+    });
+
+    const text = response.text?.replace(/\u0000/g, "").trim() || "";
+
+    if (!text || text.includes("NO_READABLE_STUDY_TEXT") || text.length < 60) {
+      throw new Error(
+        "This image does not contain enough readable study text. Try a clearer screenshot or upload a text-based PDF.",
+      );
+    }
+
+    return text;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (
+      message.includes("API_KEY_INVALID") ||
+      message.includes("API key not valid")
+    ) {
+      throw new Error(
+        "The Gemini API key is invalid. Create a key in Google AI Studio and update GEMINI_API_KEY in .env.local.",
+      );
+    }
+
+    if (message.includes("quota") || message.includes("RESOURCE_EXHAUSTED")) {
+      throw new Error(
+        "Image OCR hit the Gemini quota limit. Try again later or use a text-based PDF.",
+      );
+    }
+
+    throw new Error(`Image text extraction failed: ${message.slice(0, 300)}`);
   }
 }

@@ -153,7 +153,7 @@ create policy "flashcard_reviews_owner_all" on public.flashcard_reviews for all 
 create policy "user_settings_owner_all" on public.user_settings for all to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('study-pdfs', 'study-pdfs', false, 26214400, array['application/pdf'])
+values ('study-pdfs', 'study-pdfs', false, 26214400, array['application/pdf', 'image/png', 'image/jpeg', 'image/webp'])
 on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
 
 drop policy if exists "pdf_owner_select" on storage.objects;

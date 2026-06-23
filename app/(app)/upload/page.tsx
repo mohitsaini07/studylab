@@ -23,12 +23,26 @@ type Result = {
   flashcards: number;
 };
 type OptionKey = "summary" | "topics" | "questions" | "flashcards";
+const MAX_PDF_SIZE = 25 * 1024 * 1024;
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const imageTypes = ["image/png", "image/jpeg", "image/webp"];
 const optionLabels: [OptionKey, string][] = [
   ["summary", "AI summary"],
   ["topics", "Important topics"],
   ["questions", "Practice questions"],
   ["flashcards", "Flashcards"],
 ];
+
+function getUploadContentType(file: File, fileKind: "pdf" | "image") {
+  if (file.type) return file.type;
+  if (fileKind === "pdf") return "application/pdf";
+
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".png")) return "image/png";
+  if (name.endsWith(".webp")) return "image/webp";
+  return "image/jpeg";
+}
+
 export default function Upload() {
   const [state, setState] = useState<State>("idle");
   const input = useRef<HTMLInputElement>(null);
@@ -43,23 +57,52 @@ export default function Upload() {
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
   const hasSelection = Object.values(options).some(Boolean);
+  const fileKind =
+    file &&
+    (file.type.startsWith("image/") || /\.(png|jpe?g|webp)$/i.test(file.name))
+      ? "image"
+      : "pdf";
+  const uploadContentType = file
+    ? getUploadContentType(file, fileKind)
+    : "application/pdf";
+  const nextSteps =
+    fileKind === "image"
+      ? [
+          "We read image text with OCR",
+          "StudyLab creates your selected material",
+          "You review, practice, and improve",
+        ]
+      : [
+          "We extract and organize key ideas",
+          "StudyLab creates your selected material",
+          "You review, practice, and improve",
+        ];
   function pick(candidate?: File) {
     const selected = candidate ?? input.current?.files?.[0];
     if (!selected) return;
-    if (
-      selected.type !== "application/pdf" &&
-      !selected.name.toLowerCase().endsWith(".pdf")
-    ) {
-      toast.error("Please choose a PDF file");
+
+    const isPdf =
+      selected.type === "application/pdf" ||
+      selected.name.toLowerCase().endsWith(".pdf");
+    const isImage =
+      imageTypes.includes(selected.type) ||
+      /\.(png|jpe?g|webp)$/i.test(selected.name);
+
+    if (!isPdf && !isImage) {
+      toast.error("Please choose a PDF, PNG, JPG, or WebP file");
       return;
     }
-    if (selected.size > 25 * 1024 * 1024) {
+    if (isPdf && selected.size > MAX_PDF_SIZE) {
       toast.error("PDF must be smaller than 25 MB");
+      return;
+    }
+    if (isImage && selected.size > MAX_IMAGE_SIZE) {
+      toast.error("Image must be smaller than 5 MB");
       return;
     }
     setFile(selected);
     setState("selected");
-    toast.success("PDF added successfully");
+    toast.success(`${isImage ? "Image" : "PDF"} added successfully`);
   }
   function reset() {
     setFile(null);
@@ -100,7 +143,7 @@ export default function Upload() {
       const { error: uploadError } = await supabase.storage
         .from("study-pdfs")
         .upload(storagePath, file, {
-          contentType: "application/pdf",
+          contentType: uploadContentType,
           upsert: false,
         });
 
@@ -119,7 +162,7 @@ export default function Upload() {
           storagePath,
           fileName: file.name,
           fileSize: file.size,
-          contentType: file.type || "application/pdf",
+          contentType: uploadContentType,
           difficulty,
           options,
         }),
@@ -167,7 +210,7 @@ export default function Upload() {
       <PageHeader
         eyebrow="New study set"
         title="Upload your study material"
-        description="Add a PDF and StudyLab will turn it into a structured set of notes, questions, quizzes, and flashcards."
+        description="Add a text-based PDF or a clear study image and StudyLab will turn it into notes, questions, quizzes, and flashcards."
       />
       {state === "done" && result ? (
         <Card className="p-8 text-center sm:p-12">
@@ -221,7 +264,7 @@ export default function Upload() {
                 <input
                   ref={input}
                   type="file"
-                  accept="application/pdf"
+                  accept="application/pdf,image/png,image/jpeg,image/webp"
                   className="hidden"
                   onChange={() => pick()}
                 />
@@ -233,8 +276,9 @@ export default function Upload() {
                     />
                     <p className="mt-4 font-medium">Building your study set…</p>
                     <p className="mt-2 text-sm text-muted">
-                      Uploading, reading concepts, and generating selected
-                      material
+                      {fileKind === "image"
+                        ? "Uploading, reading image text, and generating selected material"
+                        : "Uploading, reading concepts, and generating selected material"}
                     </p>
                     <Progress
                       value={progress}
@@ -252,12 +296,16 @@ export default function Upload() {
                       <UploadCloud size={22} />
                     </span>
                     <p className="mt-4 font-medium">
-                      Drop your PDF here, or{" "}
+                      Drop your PDF or image here, or{" "}
                       <span className="text-brand">browse</span>
                     </p>
                     <p className="mt-2 text-xs text-muted">
-                      PDF up to 25 MB · Text-based files work best
+                      PDF up to 25 MB · Images up to 5 MB · Clear text works best
                     </p>
+                    <div className="mx-auto mt-4 inline-flex max-w-md items-center justify-center rounded-full border border-border bg-white px-3 py-1.5 text-xs text-muted">
+                      For best results, upload text-based PDFs when possible or
+                      clear, small images when needed.
+                    </div>
                   </>
                 )}
               </div>
@@ -345,17 +393,14 @@ export default function Upload() {
               </div>
               <p className="mt-3 text-xs leading-5 text-muted">
                 Files are stored in your private folder and can only be accessed by your account.
+                Images use OCR and may consume more AI quota than text-based PDFs.
               </p>
             </Card>
             <div className="mt-5">
               <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">
                 What happens next
               </p>
-              {[
-                "We extract and organize key ideas",
-                "StudyLab creates your selected material",
-                "You review, practice, and improve",
-              ].map((x, i) => (
+              {nextSteps.map((x, i) => (
                 <div key={x} className="flex gap-3 py-3">
                   <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-soft text-[11px] font-semibold text-brand">
                     {i + 1}

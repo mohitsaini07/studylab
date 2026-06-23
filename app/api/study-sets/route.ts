@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { generateStudyMaterial } from "@/lib/ai";
+import { extractTextFromImage, generateStudyMaterial } from "@/lib/ai";
 import { extractPdfText } from "@/lib/pdf";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -8,7 +8,11 @@ import { createClient } from "@/lib/supabase/server";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const MAX_SIZE = 25 * 1024 * 1024;
+const MAX_PDF_SIZE = 25 * 1024 * 1024;
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"] as const;
+type SourceType = "pdf" | "image";
+type SupportedContentType = "application/pdf" | (typeof IMAGE_TYPES)[number];
 
 const difficultySchema = z
   .enum(["Foundational", "Balanced", "Advanced"])
@@ -29,8 +33,8 @@ const generationOptionsSchema = z
 const directUploadSchema = z.object({
   storagePath: z.string().min(1),
   fileName: z.string().min(1),
-  fileSize: z.number().int().positive().max(MAX_SIZE),
-  contentType: z.string().optional(),
+  fileSize: z.number().int().positive(),
+  contentType: z.string().min(1),
   difficulty: difficultySchema,
   options: generationOptionsSchema,
 });
@@ -39,6 +43,8 @@ type GenerationInput = {
   buffer: ArrayBuffer;
   storagePath: string;
   fileName: string;
+  contentType: string;
+  sourceType: SourceType;
   difficulty: z.infer<typeof difficultySchema>;
   options: z.infer<typeof generationOptionsSchema>;
 };
@@ -57,12 +63,57 @@ async function getVerifiedUser(supabase: ReturnType<typeof createAdminClient>) {
   return authResult.data.user;
 }
 
-function validatePdfFileName(fileName: string, contentType?: string) {
+function getImageContentType(fileName: string) {
+  const lowerName = fileName.toLowerCase();
+
+  if (lowerName.endsWith(".png")) return "image/png";
+  if (lowerName.endsWith(".webp")) return "image/webp";
+  if (/\.(jpe?g)$/i.test(lowerName)) return "image/jpeg";
+  return null;
+}
+
+function getSupportedContentType(
+  fileName: string,
+  contentType?: string,
+): SupportedContentType {
+  const lowerName = fileName.toLowerCase();
+
   if (
-    contentType !== "application/pdf" &&
-    !fileName.toLowerCase().endsWith(".pdf")
+    contentType === "application/pdf" ||
+    lowerName.endsWith(".pdf")
   ) {
-    throw new Error("Only PDF files are supported.");
+    return "application/pdf";
+  }
+
+  if (
+    contentType &&
+    (IMAGE_TYPES as readonly string[]).includes(contentType)
+  ) {
+    return contentType as SupportedContentType;
+  }
+
+  const imageContentType = getImageContentType(fileName);
+  if (imageContentType) {
+    return imageContentType as SupportedContentType;
+  }
+
+  throw new Error("Only PDF, PNG, JPG, and WebP files are supported.");
+}
+
+function getSourceType(fileName: string, contentType?: string): SourceType {
+  return getSupportedContentType(fileName, contentType) === "application/pdf"
+    ? "pdf"
+    : "image";
+}
+
+function validateFileSize(size: number, sourceType: SourceType) {
+  const max = sourceType === "pdf" ? MAX_PDF_SIZE : MAX_IMAGE_SIZE;
+  const label = sourceType === "pdf" ? "PDF" : "Image";
+
+  if (size === 0 || size > max) {
+    throw new Error(
+      `${label} must be between 1 byte and ${sourceType === "pdf" ? "25 MB" : "5 MB"}.`,
+    );
   }
 }
 
@@ -75,7 +126,12 @@ async function readRequestInput(
 
   if (contentType.includes("application/json")) {
     const parsed = directUploadSchema.parse(await request.json());
-    validatePdfFileName(parsed.fileName, parsed.contentType);
+    const normalizedContentType = getSupportedContentType(
+      parsed.fileName,
+      parsed.contentType,
+    );
+    const sourceType = getSourceType(parsed.fileName, normalizedContentType);
+    validateFileSize(parsed.fileSize, sourceType);
 
     if (!parsed.storagePath.startsWith(`${userId}/`)) {
       throw new Error("Uploaded file does not belong to this account.");
@@ -86,18 +142,18 @@ async function readRequestInput(
       .download(parsed.storagePath);
 
     if (error || !data) {
-      throw new Error(`Could not read uploaded PDF: ${error?.message}`);
+      throw new Error(`Could not read uploaded file: ${error?.message}`);
     }
 
     const buffer = await data.arrayBuffer();
-    if (buffer.byteLength === 0 || buffer.byteLength > MAX_SIZE) {
-      throw new Error("PDF must be between 1 byte and 25 MB.");
-    }
+    validateFileSize(buffer.byteLength, sourceType);
 
     return {
       buffer,
       storagePath: parsed.storagePath,
       fileName: parsed.fileName,
+      contentType: normalizedContentType,
+      sourceType,
       difficulty: parsed.difficulty,
       options: parsed.options,
     };
@@ -116,21 +172,19 @@ async function readRequestInput(
   );
 
   if (!(file instanceof File)) {
-    throw new Error("Choose a PDF to upload.");
+    throw new Error("Choose a PDF or image to upload.");
   }
 
-  validatePdfFileName(file.name, file.type);
-
-  if (file.size === 0 || file.size > MAX_SIZE) {
-    throw new Error("PDF must be between 1 byte and 25 MB.");
-  }
+  const normalizedContentType = getSupportedContentType(file.name, file.type);
+  const sourceType = getSourceType(file.name, normalizedContentType);
+  validateFileSize(file.size, sourceType);
 
   const buffer = await file.arrayBuffer();
   const storagePath = `${userId}/${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
   const { error: uploadError } = await supabase.storage
     .from("study-pdfs")
     .upload(storagePath, buffer, {
-      contentType: "application/pdf",
+      contentType: normalizedContentType,
       upsert: false,
     });
 
@@ -140,6 +194,8 @@ async function readRequestInput(
     buffer,
     storagePath,
     fileName: file.name,
+    contentType: normalizedContentType,
+    sourceType,
     difficulty,
     options,
   };
@@ -186,7 +242,7 @@ export async function POST(request: Request) {
       .from("study_sets")
       .insert({
         user_id: user.id,
-        title: input.fileName.replace(/\.pdf$/i, ""),
+        title: input.fileName.replace(/\.(pdf|png|jpe?g|webp)$/i, ""),
         file_name: input.fileName,
         file_url: input.storagePath,
         status: "processing",
@@ -197,8 +253,14 @@ export async function POST(request: Request) {
     if (createError) throw new Error(createError.message);
     studySetId = created.id;
 
-    stage = "PDF extraction";
-    const { text, pageCount } = await extractPdfText(input.buffer);
+    stage = input.sourceType === "pdf" ? "PDF extraction" : "image OCR";
+    const { text, pageCount } =
+      input.sourceType === "pdf"
+        ? await extractPdfText(input.buffer)
+        : {
+            text: await extractTextFromImage(input.buffer, input.contentType),
+            pageCount: 1,
+          };
 
     stage = "Gemini generation";
     const generated = await generateStudyMaterial(
