@@ -123,7 +123,18 @@ export function PublicFooter() {
             Pricing
           </Link>
         </div>
-        <p>© 2026 StudyLab.</p>
+        <div className="flex flex-col gap-1 sm:text-right">
+          <p>
+            © 2026 StudyLab. Built by{" "}
+            <span className="font-semibold text-ink">Mohit Saini</span>.
+          </p>
+          <a
+            href="mailto:mohitsaini.codes@gmail.com"
+            className="hover:text-brand transition-colors"
+          >
+            mohitsaini.codes@gmail.com
+          </a>
+        </div>
       </div>
     </footer>
   );

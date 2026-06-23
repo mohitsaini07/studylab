@@ -182,6 +182,17 @@ export default function Landing() {
         </section>
       </main>
       <PublicFooter />
+      <a
+        href="https://digitalheroesco.com"
+        target="_blank"
+        rel="noreferrer"
+        className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-full border border-border bg-white/90 p-1.5 pr-4 text-sm font-medium text-ink shadow-lg backdrop-blur-md transition-all hover:-translate-y-0.5 hover:shadow-xl sm:bottom-8 sm:right-8"
+      >
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-white shadow-inner">
+          <Sparkles size={14} />
+        </div>
+        Built for Digital Heroes
+      </a>
     </div>
   );
 }
