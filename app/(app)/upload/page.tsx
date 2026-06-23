@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Card, PageHeader, Progress } from "@/components/ui";
+import { createClient } from "@/lib/supabase/client";
 
 type State = "idle" | "selected" | "processing" | "done";
 type Result = {
@@ -67,32 +68,68 @@ export default function Upload() {
     setProgress(0);
     if (input.current) input.current.value = "";
   }
-  function generate() {
+  async function generate() {
     if (!file || !hasSelection) {
       toast.error("Choose at least one item to generate");
       return;
     }
     setState("processing");
     setProgress(0);
-    const form = new FormData();
-    form.append("file", file);
-    form.append("difficulty", difficulty);
-    form.append("options", JSON.stringify(options));
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", "/api/study-sets");
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable)
-        setProgress(Math.round((e.loaded / e.total) * 35));
-    };
-    xhr.onreadystatechange = () => {
-      if (xhr.readyState === 2) setProgress(45);
-    };
-    xhr.onload = () => {
-      let body: { error?: string } & Partial<Result> = {};
-      try {
-        body = JSON.parse(xhr.responseText);
-      } catch {}
-      if (xhr.status >= 200 && xhr.status < 300 && body.id) {
+
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        setState("selected");
+        toast.error("Please sign in again before uploading.");
+        return;
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+      const storagePath = `${user.id}/${crypto.randomUUID()}-${safeName}`;
+
+      setProgress(18);
+      const { error: uploadError } = await supabase.storage
+        .from("study-pdfs")
+        .upload(storagePath, file, {
+          contentType: "application/pdf",
+          upsert: false,
+        });
+
+      if (uploadError) throw new Error(`Upload failed: ${uploadError.message}`);
+
+      setProgress(42);
+      const response = await fetch("/api/study-sets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {}),
+        },
+        body: JSON.stringify({
+          storagePath,
+          fileName: file.name,
+          fileSize: file.size,
+          contentType: file.type || "application/pdf",
+          difficulty,
+          options,
+        }),
+      });
+
+      const body: { error?: string } & Partial<Result> = await response
+        .json()
+        .catch(() => ({}));
+
+      if (response.ok && body.id) {
         setProgress(100);
         setResult(body as Result);
         setState("done");
@@ -101,13 +138,14 @@ export default function Upload() {
         setState("selected");
         toast.error(body.error || "Could not generate the study set");
       }
-    };
-    xhr.onerror = () => {
+    } catch (error) {
       setState("selected");
-      toast.error("Network error. Please try again.");
-    };
-    xhr.send(form);
-    setProgress(25);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Network error. Please try again.",
+      );
+    }
   }
   const resultItems = result
     ? [
